@@ -12,12 +12,12 @@ from stable_baselines3 import PPO
 # trainer.train_rl(models_to_train=1, episodes_per_model=20000)
 
 
-### Training on horizon observations
-# env = HorizonObservationWrapper(gym.make("reference_environment:reference-environment-v0"),
-#                               horizon_length=50,
-#                               transform_name="Standard")
-# trainer = Trainer(env)
-# trainer.train_rl(models_to_train=1,episodes_per_model=20000)
+## Training on horizon observations
+env = HorizonObservationWrapper(gym.make("reference_environment:reference-environment-v0"),
+                              horizon_length=30,
+                              transform_name="Standard")
+trainer = Trainer(env)
+trainer.train_rl(models_to_train=1, episodes_per_model=20000)
 
 
 ### Testing phase reward wrapper
