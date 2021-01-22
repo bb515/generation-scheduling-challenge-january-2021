@@ -35,44 +35,19 @@ from stable_baselines3 import PPO
 # # trainer.train_rl(models_to_train=1,episodes_per_model=1000)                   # Begin Training
 # trainer.retrain_rl(model=PPO.load("logs/best_model_peak_20"), episodes=1000)   # Retraining
 
-from gym import spaces, ActionWrapper
-
-class MinActionWrapper(ActionWrapper):
-    def __init__(self, env):
-        super(MinActionWrapper, self).__init__(env)
-
-        act_low = np.array(
-            [
-                0.5,
-                0.5,
-            ],
-            dtype=np.float32,
-        )
-        act_high = np.array(
-            [
-                3,
-                2,
-            ],
-            dtype=np.float32,
-        )
-        self.action_space = spaces.Box(act_low, act_high, dtype=np.float32)
-
-    def action(self, act):
-        return act
 
 ### Test training on peak then full
-env_action = MinActionWrapper(gym.make("reference_environment:reference-environment-v0"))
-env_horizon = HorizonObservationWrapper(env_action,
+env_horizon = HorizonObservationWrapper(gym.make("reference_environment:reference-environment-v0"),
                               horizon_length=30,
                               transform_name="Standard")
-# env_peak = PhaseRewardWrapper(env_horizon, phase="Peak")          # Set Phase to Peak
-# trainer = Trainer(env_peak)
-# trainer.train_rl(models_to_train=1,episodes_per_model=3000)       # Begin Training
-model = PPO.load("logs/best_model")                               # Load best model
-model.learning_rate = 0.001
-env_full = PhaseRewardWrapper(env_horizon, phase="Full")          # Set Phase to Full
-trainer = Trainer(env_full)
-trainer.retrain_rl(model=model, episodes=50000)                    # Re-train on full phase
+env_peak = PhaseRewardWrapper(env_horizon, phase="Peak")          # Set Phase to Peak
+trainer = Trainer(env_peak)
+trainer.train_rl(models_to_train=1,episodes_per_model=3000)       # Begin Training
+# model = PPO.load("logs/best_model_peak_30")                               # Load best model
+# model.learning_rate = 0.0003
+# env_full = PhaseRewardWrapper(env_horizon, phase="Full")          # Set Phase to Full
+# trainer = Trainer(env_full)
+# trainer.retrain_rl(model=model, episodes=50000)                    # Re-train on full phase
 
 ### Retraining
 # env=HorizonObservationWrapper(gym.make("reference_environment:reference-environment-v0"),
