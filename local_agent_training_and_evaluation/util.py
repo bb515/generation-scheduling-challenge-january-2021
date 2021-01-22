@@ -8,6 +8,8 @@ from stable_baselines3 import PPO
 from stable_baselines3.ppo import MlpPolicy
 from stable_baselines3.common.callbacks import EvalCallback
 from gym import spaces, ObservationWrapper, RewardWrapper, ActionWrapper
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 
 class Trainer:
@@ -252,3 +254,226 @@ class PhaseRewardWrapper(RewardWrapper):
             rew = 0
 
         return rew
+
+
+def plot_frame(state_tuple, lim_tuple, ax, frame):
+    (rewards_total,
+     # rewards_fuel_cost,  # superseded
+     # rewards_imbalance_cost,
+     generator_1_levels,
+     generator_2_levels,
+     actions,
+     agent_predictions,
+     agent_prediction) = state_tuple
+    (xlim_max, ylim_min_1, ylim_max_3,
+     ylim_min_3, ylim_max_4, ylim_min_4) = lim_tuple
+
+    # Unpack ax tuple
+    ((ax1, ax2), (ax3, ax4)) = ax
+
+    # cumulative total cost
+    ax1.set_xlim(0, xlim_max)
+    ax1.set_ylim(ylim_min_1, 0)
+    ax1.plot(np.cumsum(rewards_total[:frame + 1]))
+    ax1.set_xlabel("time")
+    ax1.set_ylabel("cumulative reward")
+    # could be expanded to include individual components of the reward
+
+    # # Stacked plot - superseded as we don't want to change the reference environment code
+    # ax1.set_xlim(0, xlim_max)
+    # ax1.set_ylim(ylim_min_1, 0)
+    # ax1.stackplot(np.linspace(0, frame, frame + 1),
+    #               np.cumsum(rewards_imbalance_cost[:frame + 1]), np.cumsum(rewards_fuel_cost[:frame + 1]),
+    #               labels=['imbalance', 'fuel'])
+    # ax1.plot(generator_2_levels[:frame])
+    # ax1.set_xlabel("time")
+    # ax1.set_ylabel("cumulative reward")
+
+    # generator levels
+    ax2.set_xlim(0, xlim_max)
+    ax2.set_ylim(0.4, 3.1)
+    ax2.plot(generator_1_levels[:frame])
+    ax2.plot(generator_2_levels[:frame])
+    ax2.set_xlabel("time")
+    ax2.set_ylabel("generator levels")
+
+    actions
+    ax3.set_xlim(0, xlim_max)
+    ax3.set_ylim(ylim_min_3, ylim_max_3)
+    ax3.plot(actions[:frame])
+    ax3.set_xlabel("time")
+    ax3.set_ylabel("actions")
+
+    # # agent predictions simple
+    # ax3.set_ylim(ylim_min_4, ylim_max_4)
+    # ax3.set_xlim(0, xlim_max)
+    # ax3.plot(agent_predictions[frame])
+    # ax3.set_xlabel("time")
+    # ax3.set_ylabel("predictions")
+
+    # # agent prediction simple
+    # ax4.set_ylim(ylim_min_4, ylim_max_4)
+    # ax4.set_xlim(0, xlim_max)
+    # ax4.plot(agent_prediction[frame], 'b')
+    # ax4.set_xlabel("time")
+    # ax4.set_ylabel("prediction")
+
+    # agent prediction
+    ax4.set_ylim(ylim_min_4, ylim_max_4)
+    ax4.set_xlim(0, xlim_max)
+    ax4.plot(agent_prediction[frame, :frame + 1], 'b')  # up to and including current time
+    ax4.plot(np.linspace(frame, 96, num=int(96-frame) , dtype=int), agent_prediction[frame, frame:], 'b', alpha=0.35)
+    ax4.plot(generator_1_levels[:frame] + generator_2_levels[:frame], 'r', label='generator_levels')
+    ax4.set_xlabel("time")
+    ax4.set_ylabel("prediction")
+
+    return ((ax1, ax2), (ax3, ax4))
+
+
+def get_agent_prediction(agent_predictions):
+    """
+    :arg: agent_predictions (timesteps, timesteps) array like
+    :returns: agent_prediction (timesteps, timesteps) array like
+    """
+    steps = np.shape(agent_predictions)[0]
+    outruns = []
+    plot_mes = []
+    for t in range(steps):
+        plot_me = np.empty(steps)
+        # plot the
+        plot_me[t:] = agent_predictions[t, t:]
+        plot_me[:t] = np.array(outruns)
+        outruns.append(agent_predictions.T[t, t])
+        plot_mes.append(plot_me)
+
+    return np.array(plot_mes)
+
+
+def plot_policy_picture(state, fname):
+    fig, ax = plt.subplots(2, 2)
+
+    rewards_total = np.array(state.rewards_all)
+    generator_1_levels = np.array(state.generator_1_levels_all)
+    generator_2_levels = np.array(state.generator_2_levels_all)
+    actions = np.array(state.actions_all)
+    agent_predictions = np.array(state.agent_predictions_all)
+    agent_prediction = get_agent_prediction(agent_predictions)
+    xlim_max = np.shape(rewards_total)[0]
+    ylim_min_1 = 1.03 * np.sum(rewards_total)
+    ylim_max_3 = 1.1 * np.amax(actions)
+    ylim_min_3 = 0.9 * np.amin(actions)
+    ylim_max_4 = 1.05 * np.amax(agent_predictions)
+    ylim_min_4 = 1.05 * np.amin(agent_predictions)
+
+    # Unpack ax tuple
+    ((ax1, ax2), (ax3, ax4)) = ax
+
+    # cumulative total cost
+    ax1.set_xlim(0, xlim_max)
+    ax1.set_ylim(ylim_min_1, 0)
+    ax1.plot(np.cumsum(rewards_total))
+    ax1.set_xlabel("time")
+    ax1.set_ylabel("cumulative reward")
+    # could be expanded to include individual components of the reward
+
+    # # Stacked plot - superseded as we don't want to change the reference environment code
+    # ax1.set_xlim(0, xlim_max)
+    # ax1.set_ylim(ylim_min_1, 0)
+    # ax1.stackplot(np.linspace(0, frame, frame + 1),
+    #               np.cumsum(rewards_imbalance_cost), np.cumsum(rewards_fuel_cost),
+    #               labels=['imbalance', 'fuel'])
+    # ax1.set_xlabel("time")
+    # ax1.set_ylabel("cumulative reward")
+
+    # generator levels
+    ax2.set_xlim(0, xlim_max)
+    ax2.set_ylim(0.4, 3.1)
+    ax2.plot(generator_1_levels)
+    ax2.plot(generator_2_levels)
+    ax2.set_xlabel("time")
+    ax2.set_ylabel("generator levels")
+
+    # actions
+    ax3.set_xlim(0, xlim_max)
+    ax3.set_ylim(ylim_min_3, ylim_max_3)
+    ax3.plot(actions)
+    ax3.set_xlabel("time")
+    ax3.set_ylabel("actions")
+
+    # # agent predictions simple
+    # ax3.set_ylim(ylim_min_4, ylim_max_4)
+    # ax3.set_xlim(0, xlim_max)
+    # ax3.plot(agent_predictions[-1:])
+    # ax3.set_xlabel("time")
+    # ax3.set_ylabel("predictions")
+
+    # # agent prediction simple
+    # ax4.set_ylim(ylim_min_4, ylim_max_4)
+    # ax4.set_xlim(0, xlim_max)
+    # ax4.plot(agent_prediction[frame], 'b')
+    # ax4.set_xlabel("time")
+    # ax4.set_ylabel("prediction")
+
+    # agent prediction
+    ax4.set_ylim(ylim_min_4, ylim_max_4)
+    ax4.set_xlim(0, xlim_max)
+    ax4.plot(agent_prediction[-1], 'b')  # Simply final timestep
+    ax4.plot(generator_1_levels + generator_2_levels, 'r', label='generator_levels')
+    ax4.set_xlabel("time")
+    ax4.set_ylabel("prediction")
+
+    plt.savefig(fname)
+
+    return None
+
+
+def plot_policy_video(state, fname):
+    rewards_total = np.array(state.rewards_all)
+    # rewards_fuel_cost = np.array(state.rewards_fuel_cost)  # superseded as we don't want to change environment/env.py
+    # rewards_imbalance_cost = np.array(state.rewards_imbalance_cost)
+    generator_1_levels = np.array(state.generator_1_levels_all)
+    generator_2_levels = np.array(state.generator_2_levels_all)
+    actions = np.array(state.actions_all)
+    agent_predictions = np.array(state.agent_predictions_all)
+    agent_prediction = get_agent_prediction(agent_predictions)
+    xlim_max = np.shape(rewards_total)[0]
+    ylim_min_1 = 1.03 * np.sum(rewards_total)
+    ylim_max_3 = 1.1 * np.amax(actions)
+    ylim_min_3 = 0.9 * np.amin(actions)
+    ylim_max_4 = 1.05 * np.amax(agent_predictions)
+    ylim_min_4 = 1.05 * np.amin(agent_predictions)
+    state_tuple = (rewards_total,
+     generator_1_levels,
+     generator_2_levels,
+     actions,
+     agent_predictions,
+     agent_prediction)
+    lim_tuple = (xlim_max, ylim_min_1, ylim_max_3, ylim_min_3, ylim_max_4, ylim_min_4)
+    J = 2
+    K = 2
+    fig, ax = plt.subplots(J, K)
+
+    def animate(i):
+        print('{} frame {} rendered'.format(fname, i))
+        # Clear the axis
+        for j in range(J):
+            for k in range(K):
+                ax[j, k].clear()
+        # Plot on fresh axis
+        plot_frame(state_tuple, lim_tuple, ax, frame=i)
+        plt.tight_layout()
+        plt.show()
+        return None
+
+    ani = animation.FuncAnimation(
+        fig, animate, frames=96, interval=100)
+    # Set up formatting for the movie files
+    Writer = animation.writers['ffmpeg']
+    writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=800)
+    ani.save('{}.mp4'.format(fname), writer=writer, dpi=300)
+
+def plot2(state, fname="episode"):
+    plot_policy_video(state, fname)
+
+def plot3(state, fname="episode"):
+    plot_policy_picture(state, fname)
