@@ -195,8 +195,13 @@ def ObservationTransform(obs, H, transform, steps_per_episode=int(96)):
 
     # print("Working: horizon obs = {}".format(obs))
 
+    ### This code adds a "steps_to_peak" observation
     steps_to_peak = list(agent_prediction).index(max(agent_prediction)) - step_count
-    obs = (step_count, steps_to_peak, generator_1_level, generator_2_level) + tuple(agent_horizon_prediction)  # repack
+    # obs = (step_count, steps_to_peak, generator_1_level, generator_2_level) + tuple(agent_horizon_prediction)  # repack
+
+    obs = (step_count, generator_1_level, generator_2_level) + tuple(agent_horizon_prediction)
+
+    # print(obs)
 
     return obs
 
@@ -254,6 +259,7 @@ class PhaseRewardWrapper(RewardWrapper):
             rew = 0
 
         return rew
+
 
 
 def plot_frame(state_tuple, lim_tuple, ax, frame):
@@ -477,3 +483,28 @@ def plot2(state, fname="episode"):
 
 def plot3(state, fname="episode"):
     plot_policy_picture(state, fname)
+
+class OurActionWrapper(ActionWrapper):
+    def __init__(self, env):
+        super(ActionWrapper, self).__init__(env)
+
+        act_low = np.array(
+            [
+                0.5,
+                0.5,
+            ],
+            dtype=np.float32,
+        )
+        act_high = np.array(
+            [
+                3,
+                2,
+            ],
+            dtype=np.float32,
+        )
+        self.action_space = spaces.Box(act_low, act_high, dtype=np.float32)
+
+
+    def action(self, act):
+        return act
+
