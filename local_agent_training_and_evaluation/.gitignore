@@ -3,3 +3,6 @@ __pycache__/
 fixed_policy.MP4
 fixed_policy.png
 h=*/
+logs_horizon/
+fixed_policy*
+best_model.zip

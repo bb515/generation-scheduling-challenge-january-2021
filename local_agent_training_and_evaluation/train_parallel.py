@@ -19,8 +19,9 @@ COMM = MPI.COMM_WORLD
 size = COMM.Get_size()
 rank = COMM.Get_rank()
 
+horizons = np.linspace(4, 10, 5, dtype=np.intc)
 assert size == 5
-horizons = np.linspace(0, 15, 5, dtype=np.intc)
+
 
 ### Testing DDPG
 env_action = OurActionWrapper(gym.make("reference_environment:reference-environment-v0"))
