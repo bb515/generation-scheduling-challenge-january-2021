@@ -1,7 +1,5 @@
 import os
-
 from stable_baselines3 import PPO
-
 from util import Client
 
 # when running the agent locally, assume that the environment is accesible at localhost:5000
