@@ -13,6 +13,7 @@ seed = int(os.getenv("RANGL_SEED", 123456))
 instance_id = client.env_create(env_id, seed)
 
 
+
 client.env_monitor_start(
     instance_id,
     directory=f"monitor/{instance_id}",
@@ -31,9 +32,7 @@ while True:
         break
 
 client.env_monitor_close(instance_id)
-
 print("done", done)
-
 
 # make sure you print the instance_id as the last line in the script
 print(instance_id)

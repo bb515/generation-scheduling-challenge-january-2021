@@ -3,32 +3,61 @@ import gym
 import numpy as np
 from util import (Trainer, ObservationTransform,
                   HorizonObservationWrapper, PhaseRewardWrapper,
-                  RandomActionWrapper, JoesActionWrapper)
+                  RandomActionWrapper, JoesActionWrapper, OurActionWrapper)
 from mpi4py import MPI
-
+from stable_baselines3 import DDPG
+from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
+from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3 import PPO
 
-
 # env = gym.make("reference_environment:reference-environment-v0")
-
 # Train an RL agent on the environment
 # trainer = Trainer(env)
 # trainer.train_rl(models_to_train=1, episodes_per_model=20000)
-
 
 COMM = MPI.COMM_WORLD
 size = COMM.Get_size()
 rank = COMM.Get_rank()
 
 assert size == 5
-horizons = np.linspace(0, 30, 5, dtype=np.intc)
+horizons = np.linspace(0, 15, 5, dtype=np.intc)
 
-## Training on horizon observations
-env = HorizonObservationWrapper(gym.make("reference_environment:reference-environment-v0"),
+### Testing DDPG
+env_action = OurActionWrapper(gym.make("reference_environment:reference-environment-v0"))
+env_horizon = HorizonObservationWrapper(env_action,
                               horizon_length=horizons[rank],
                               transform_name="Standard")
+env = PhaseRewardWrapper(env_horizon, phase="Full")          # Set Phase to Full
+eval_callback = EvalCallback(env, best_model_save_path="./h={}/".format(horizons[rank]),
+                             log_path='./', eval_freq=500,
+                             deterministic=True, render=False)
+
+### DDPG Noise
+### Try increasing the noise when retraining.
+### Try less noise based on the policy plot.
+n_actions = env.action_space.shape[-1]
+action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=1 * np.ones(n_actions))
+# action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+
+model = DDPG('MlpPolicy', env, action_noise=action_noise, verbose=1, tensorboard_log="./h={}/".format(horizons[rank]),
+            gamma=0.99,
+            learning_rate=0.0003,
+            )
+# model = DDPG.load("Model_DDPG_FS_30.zip")
+# model.learning_rate = 0.0003
+# model.gamma = 0.99
+# action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=0.05*np.ones(n_actions))
+# action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.075 * np.ones(n_actions))
+# model.action_noise = action_noise
 trainer = Trainer(env)
-trainer.train_rl(models_to_train=1, episodes_per_model=20000, path='./h={}/'.format(horizons[rank]))
+trainer.retrain_rl(model, episodes=20000, path="./h={}/".format(horizons[rank]))
+
+# ## Training on horizon observations
+# env = HorizonObservationWrapper(gym.make("reference_environment:reference-environment-v0"),
+#                               horizon_length=horizons[rank],
+#                               transform_name="Standard")
+# trainer = Trainer(env)
+# trainer.train_rl(models_to_train=1, episodes_per_model=20000, path='./h={}/'.format(horizons[rank]))
 
 # ## Testing random action wrapper
 # env = JoesActionWrapper(gym.make("reference_environment:reference-environment-v0"))
@@ -51,30 +80,6 @@ trainer.train_rl(models_to_train=1, episodes_per_model=20000, path='./h={}/'.for
 # # trainer.train_rl(models_to_train=1,episodes_per_model=1000)                   # Begin Training
 # trainer.retrain_rl(model=PPO.load("logs/best_model_peak_20"), episodes=1000)   # Retraining
 
-from gym import spaces, ActionWrapper
-
-class MinActionWrapper(ActionWrapper):
-    def __init__(self, env):
-        super(MinActionWrapper, self).__init__(env)
-
-        act_low = np.array(
-            [
-                0.5,
-                0.5,
-            ],
-            dtype=np.float32,
-        )
-        act_high = np.array(
-            [
-                3,
-                2,
-            ],
-            dtype=np.float32,
-        )
-        self.action_space = spaces.Box(act_low, act_high, dtype=np.float32)
-
-    def action(self, act):
-        return act
 
 # ### Test training on peak then full
 # env_action = MinActionWrapper(gym.make("reference_environment:reference-environment-v0"))

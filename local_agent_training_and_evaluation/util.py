@@ -261,7 +261,6 @@ class PhaseRewardWrapper(RewardWrapper):
 
         return rew
 
-<<<<<<< HEAD
 
 class RandomActionWrapper(gym.ActionWrapper):
 
