@@ -4,6 +4,7 @@ import numpy as np
 from util import (Trainer, ObservationTransform,
                   HorizonObservationWrapper, PhaseRewardWrapper,
                   RandomActionWrapper, JoesActionWrapper)
+from mpi4py import MPI
 
 from stable_baselines3 import PPO
 
@@ -15,17 +16,24 @@ from stable_baselines3 import PPO
 # trainer.train_rl(models_to_train=1, episodes_per_model=20000)
 
 
-# ## Training on horizon observations
-# env = HorizonObservationWrapper(gym.make("reference_environment:reference-environment-v0"),
-#                               horizon_length=30,
-#                               transform_name="Standard")
+COMM = MPI.COMM_WORLD
+size = COMM.Get_size()
+rank = COMM.Get_rank()
+
+assert size == 5
+horizons = np.linspace(0, 30, 5, dtype=np.intc)
+
+## Training on horizon observations
+env = HorizonObservationWrapper(gym.make("reference_environment:reference-environment-v0"),
+                              horizon_length=horizons[rank],
+                              transform_name="Standard")
+trainer = Trainer(env)
+trainer.train_rl(models_to_train=1, episodes_per_model=20000, path='./h={}/'.format(horizons[rank]))
+
+# ## Testing random action wrapper
+# env = JoesActionWrapper(gym.make("reference_environment:reference-environment-v0"))
 # trainer = Trainer(env)
 # trainer.train_rl(models_to_train=1, episodes_per_model=20000)
-
-## Testing random action wrapper
-env = JoesActionWrapper(gym.make("reference_environment:reference-environment-v0"))
-trainer = Trainer(env)
-trainer.train_rl(models_to_train=1, episodes_per_model=20000)
 
 
 ### Testing phase reward wrapper

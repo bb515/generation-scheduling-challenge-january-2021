@@ -2,12 +2,12 @@
 import gym
 from stable_baselines3 import PPO
 from pathlib import Path
-from util import Evaluate, plot2, plot3
+from util import Evaluate, plot2, plot3, JoesActionWrapper
 
-env = gym.make("reference_environment:reference-environment-v0")
+env = JoesActionWrapper(gym.make("reference_environment:reference-environment-v0"))
 
 # agent = PPO.load("MODEL_0.zip")
-agent = PPO.load("logs/best_model")
+agent = PPO.load("logs_horizon/best_model_0")
 
 evaluate = Evaluate(env, agent)
 seeds = evaluate.read_seeds(fname="seeds.csv")
@@ -17,8 +17,8 @@ seeds = evaluate.read_seeds(fname="seeds.csv")
 mean_reward = evaluate.transformed_agent(seeds, H=95, transform="Standard")
 
 ## Plot the last episode
-plot2(env.state, "fixed_policy")
-plot3(env.state, "fixed_policy.png")
+plot2(env.state, "fixed_policy_h=0")
+plot3(env.state, "fixed_policy_h=0.png")
 
 # plot_policy(env.state, "fixed_policy")
 print('Mean reward:', mean_reward)
