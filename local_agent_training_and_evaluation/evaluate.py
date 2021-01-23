@@ -4,10 +4,12 @@ from stable_baselines3 import PPO
 from pathlib import Path
 from util import Evaluate
 
+
 env = gym.make("reference_environment:reference-environment-v0")
 
 # agent = PPO.load("MODEL_0.zip")
-agent = PPO.load("logs/best_model")
+from stable_baselines3 import DDPG
+agent = DDPG.load("logs/best_model_DDPG_FS_30.zip")
 
 evaluate = Evaluate(env, agent)
 seeds = evaluate.read_seeds(fname="seeds.csv")
