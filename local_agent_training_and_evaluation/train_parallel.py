@@ -3,7 +3,7 @@ import gym
 import numpy as np
 from util import (Trainer, ObservationTransform,
                   HorizonObservationWrapper, PhaseRewardWrapper,
-                  RandomActionWrapper, JoesActionWrapper, OurActionWrapper)
+                  RandomActionWrapper, OurActionWrapper)
 from mpi4py import MPI
 from stable_baselines3 import DDPG
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise

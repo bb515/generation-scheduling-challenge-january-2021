@@ -37,22 +37,22 @@ eval_callback = EvalCallback(env, best_model_save_path='./logs/',
                              deterministic=True, render=False)
 
 
-### DDPG Noise
-### Try increasing the noise when retraining.
-### Try less noise based on the policy plot.
-n_actions = env.action_space.shape[-1]
-action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=1 * np.ones(n_actions))
-# action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
-
-model = DDPG('MlpPolicy', env, action_noise=action_noise, verbose=1, tensorboard_log="./logs",
-            gamma=0.99,
-            learning_rate=0.0003,
-            )
-# model = DDPG.load("Model_DDPG_FS_30.zip")
-# model.learning_rate = 0.0003
-# model.gamma = 0.99
-# action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=0.05*np.ones(n_actions))
-# action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.075 * np.ones(n_actions))
-# model.action_noise = action_noise
-trainer = Trainer(env)
-trainer.retrain_rl(model, episodes=1000000, ident=str(sys.argv[1]+"_"+sys.argv[2]))
+# ### DDPG Noise
+# ### Try increasing the noise when retraining.
+# ### Try less noise based on the policy plot.
+# n_actions = env.action_space.shape[-1]
+# action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=1 * np.ones(n_actions))
+# # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+#
+# model = DDPG('MlpPolicy', env, action_noise=action_noise, verbose=1, tensorboard_log="./logs",
+#             gamma=0.99,
+#             learning_rate=0.0003,
+#             )
+# # model = DDPG.load("Model_DDPG_FS_30.zip")
+# # model.learning_rate = 0.0003
+# # model.gamma = 0.99
+# # action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=0.05*np.ones(n_actions))
+# # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.075 * np.ones(n_actions))
+# # model.action_noise = action_noise
+# trainer = Trainer(env)
+# trainer.retrain_rl(model, episodes=1000000, ident=str(sys.argv[1]+"_"+sys.argv[2]))
