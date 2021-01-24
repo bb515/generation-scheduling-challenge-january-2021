@@ -36,19 +36,19 @@ class Trainer:
         end = time.time()
         print("time (min): ", (end - start) / 60)
 
-    def retrain_rl(self, model, episodes, path='./logs/'):
+    def retrain_rl(self, model, episodes, path='./logs/',ident="NONAME"):
         # Method for retraining a saved model for more timesteps
         start = time.time()
 
         # Callback for saving the best agent during training
-        eval_callback = EvalCallback(self.env, best_model_save_path=path,
+        eval_callback = EvalCallback(self.env, best_model_save_path=ident,
                                      log_path=path, eval_freq=500,
                                      deterministic=True, render=False)
         steps_per_model = episodes * self.param.steps_per_episode
 
         model.set_env(self.env)
         model.learn(total_timesteps=steps_per_model, callback=eval_callback)
-        model.save("MODEL_RETRAINED")
+        model.save(ident)
 
         end = time.time()
         print("time (min): ", (end - start) / 60)
@@ -185,10 +185,10 @@ def ObservationTransform(obs, H, transform, steps_per_episode=int(96)):
     if transform == "Standard":
         pass
     if transform == "Zeroed":
-        agent_horizon_prediction -= agent_prediction[step_count] * np.ones(H)
+        agent_horizon_prediction -= agent_prediction[int(step_count)] * np.ones(int(H))
     if transform == "Deltas":
         # TODO: test this
-        agent_horizon_prediction = np.concatenate(([agent_prediction[step_count]],
+        agent_horizon_prediction = np.concatenate(([agent_prediction[int(step_count)]],
                                                    agent_horizon_prediction))
         agent_horizon_prediction = np.diff(agent_horizon_prediction)
 
@@ -215,7 +215,7 @@ class HorizonObservationWrapper(ObservationWrapper):
         self.H = horizon_length
 
         # Different transform methods
-        transform_options = ["Standard", "Zeroed", "Deltas"]
+        transform_options = ["Standard", "Zeroed", "Deltas","Zero_Delta"]
         assert transform_name in transform_options, "Set a valid transform"
         self.transform = transform_name
 
@@ -300,11 +300,11 @@ class OurActionWrapper(ActionWrapper):
         return act
 
 
-class JoesActionWrapper(gym.ActionWrapper):
+class RelativeActionWrapper(ActionWrapper):
 
     def __init__(self, env):
 
-        super(JoesActionWrapper, self).__init__(env)
+        super(RelativeActionWrapper, self).__init__(env)
         act_low = np.array(
             [
                 -0.7
@@ -317,6 +317,7 @@ class JoesActionWrapper(gym.ActionWrapper):
             ],
             dtype=np.float32,
         )
+	# overwrite action space with the relative action
         self.action_space = spaces.Box(act_low, act_high, dtype=np.float32)
 
     def action(self, action):
@@ -325,15 +326,30 @@ class JoesActionWrapper(gym.ActionWrapper):
         the 'optimal' action for both generators.
         delta \in [-0.7, 0.7] will saturate if value given outside this range.
         """
-        delta = action
-        if delta < -0.7:
-            return (-0.2, -0.5)
-        elif delta >= -0.7 and delta < -0.3:
-            return (delta + 0.5, -0.5)
-        elif delta >= -0.3 and delta <= 0.7:
-            return (0.2, delta - 0.2)
-        # else delta > 0.7
-        return (0.2, 0.5)
+        # pretty hacky way of bringing in the current generator levels
+        # this information feeds into how the power is dristributed
+        (g1, g2) = (self.env.state.generator_1_level, self.env.state.generator_2_level)
+        (g1_min, g1_max) = (self.env.param.generator_1_min,self.env.param.generator_1_max)
+        (g2_min, g2_max) = (self.env.param.generator_2_min,self.env.param.generator_2_max)
+        # get updated g1_delta and g2_delta based on current values
+        # NOTE: hard-coded max and min ramps...
+        g1_delta_min = g1_min - g1 if g1_min - g1 > -0.2 else -0.2	
+        g1_delta_max = g1_max - g1 if g1_max - g1 < 0.2 else 0.2	
+        g2_delta_min = g2_min - g2 if g2_min - g2 > -0.5 else -0.5
+        g2_delta_max = g2_max - g2 if g2_max - g2 < 0.5 else 0.5	
+        delta_min = g1_delta_min + g2_delta_min
+        delta_max = g1_delta_max + g2_delta_max
+        # we are outside the dynamic action space
+        if action < delta_min:
+            return (g1_delta_min + g1, g2_delta_min + g2)
+        # g1 only region
+        if action >= delta_min and action < g1_delta_max + g1_delta_min:
+            return (action - g2_delta_min + g1, g2_delta_min + g2)
+        # g1 saturated
+        if action >= g1_delta_max + g1_delta_min and action < delta_max:
+            return (g1_delta_max + g1, action - g1_delta_max + g2)
+        # else delta > delta_max
+        return (g1_delta_max + g1, g1_delta_max + g2)
 
 
 def get_agent_prediction(agent_predictions):

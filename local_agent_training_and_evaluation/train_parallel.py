@@ -24,10 +24,10 @@ assert size == 5
 
 
 ### Testing DDPG
-env_action = OurActionWrapper(gym.make("reference_environment:reference-environment-v0"))
+env_action = RelativeActionWrapper(gym.make("reference_environment:reference-environment-v0"))
 env_horizon = HorizonObservationWrapper(env_action,
                               horizon_length=horizons[rank],
-                              transform_name="Standard")
+                              transform_name="Zeroed")
 env = PhaseRewardWrapper(env_horizon, phase="Full")          # Set Phase to Full
 eval_callback = EvalCallback(env, best_model_save_path="./h={}/".format(horizons[rank]),
                              log_path='./', eval_freq=500,
