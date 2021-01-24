@@ -335,6 +335,7 @@ def action_transform(action, env):
     (g1, g2) = (env.state.generator_1_level, env.state.generator_2_level)
     (g1_min, g1_max) = (env.param.generator_1_min, env.param.generator_1_max)
     (g2_min, g2_max) = (env.param.generator_2_min, env.param.generator_2_max)
+    action = action[0]
     # get updated g1_delta and g2_delta based on current values
     # NOTE: hard-coded max and min ramps...
     g1_delta_min = g1_min - g1 if g1_min - g1 > -0.2 else -0.2	
