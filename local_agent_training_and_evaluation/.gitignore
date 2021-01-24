@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 environment/reference_environment.egg-info/
 environment/reference_environment/__pychache__/
 local_agent_training_and_evaluation/__pycache/
@@ -6,3 +7,13 @@ local_agent_training_and_evaluation/logs/best_model.zip
 local_agent_training_and_evaluation/logs/evaluations.npz
 __pycache__/
 .idea/
+=======
+.DS_Store
+__pycache__/
+fixed_policy.MP4
+fixed_policy.png
+h=*/
+logs_horizon/
+fixed_policy*
+best_model.zip
+>>>>>>> ben
