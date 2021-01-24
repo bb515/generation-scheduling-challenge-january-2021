@@ -349,7 +349,7 @@ class RelativeActionWrapper(ActionWrapper):
         if action >= g1_delta_max + g1_delta_min and action < delta_max:
             return (g1_delta_max + g1, action - g1_delta_max + g2)
         # else delta > delta_max
-        return (g1_delta_max + g1, g1_delta_max + g2)
+        return (g1_delta_max + g1, g2_delta_max + g2)
 
 
 def get_agent_prediction(agent_predictions):
