@@ -1,6 +1,6 @@
 import os
 
-from stable_baselines3 import PPO
+from stable_baselines3 import DDPG
 
 from util import Client
 
@@ -23,13 +23,52 @@ client.env_monitor_start(
     video_callable=False,
 )
 
-model = PPO.load("MODEL_0")
+model = DDPG.load("MODEL_ALPHA_GENERATION")
 
 observation = client.env_reset(instance_id)
 
 print(observation)
 
+import numpy as np
+def ObservationTransform(obs, H, transform, steps_per_episode=int(96)):
+    step_count, generator_1_level, generator_2_level = obs[:3]
+    agent_prediction = np.array(obs[3:])  # since it was stored as a tuple
+    # Initiate the padding values to 2 (the mean value), but note that this is a design choice
+    # It might be better to initate them to -99999999 (a large number) if that means they interfere less
+    # It might not matter
+    agent_horizon_prediction = agent_prediction[-1] * np.ones(steps_per_episode)
+    agent_horizon_prediction[:int(steps_per_episode - step_count)] = agent_prediction[int(step_count):]  # inclusive index
+    agent_horizon_prediction = agent_horizon_prediction[:H]
+
+    if transform == "Standard":
+        pass
+    if transform == "Zeroed":
+        agent_horizon_prediction -= agent_prediction[step_count] * np.ones(H)
+    if transform == "Deltas":
+        # TODO: test this
+        agent_horizon_prediction = np.concatenate(([agent_prediction[step_count]],
+                                                   agent_horizon_prediction))
+        agent_horizon_prediction = np.diff(agent_horizon_prediction)
+
+
+    # print("Working: horizon obs = {}".format(obs))
+
+    ### This code adds a "steps_to_peak" observation
+    steps_to_peak = list(agent_prediction).index(max(agent_prediction)) - step_count
+    # obs = (step_count, steps_to_peak, generator_1_level, generator_2_level) + tuple(agent_horizon_prediction)  # repack
+
+    obs = (step_count, generator_1_level, generator_2_level) + tuple(agent_horizon_prediction)
+
+    # print(obs)
+
+    return obs
+
 while True:
+
+    # Perform observation transform to pass mapped obs to agent
+    observation = ObservationTransform(observation, H=7, transform="Standard")
+    observation = np.array(observation)
+
     action, _ = model.predict(observation, deterministic=True)
     action = [float(action[0]), float(action[1])]
     observation, reward, done, info = client.env_step(instance_id, action)
