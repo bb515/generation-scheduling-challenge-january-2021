@@ -358,8 +358,8 @@ class RelativeActionWrapper(ActionWrapper):
             return (action - g2_delta_min + g1, g2_delta_min + g2)
         if action >= g1_delta_max + g1_delta_min and action < delta_max:  # Cheap generator is maxed out
             return (g1_delta_max + g1, action - g1_delta_max + g2)
-        # elif delta > delta_max
-        return (g1_delta_max + g1, g1_delta_max + g2)  # Constrained by maximum deltas
+        # else delta > delta_max
+        return (g1_delta_max + g1, g2_delta_max + g2)  # Constrained by maximum deltas
 
 
 def get_agent_prediction(agent_predictions):
