@@ -280,7 +280,7 @@ class GymEnv(gym.Env):
         #print('the score to be returned is: ',score(self.state))
         #return score(self.state)
 
-    def plot(self, fname="episode.png"):
+    def plot(self, fname="fixed_policy.png"):
         plot_episode(self.state, fname)
 
     def render(self):

@@ -3,7 +3,7 @@ import gym
 import numpy as np
 from util import (Trainer, ObservationTransform,
                   HorizonObservationWrapper, PhaseRewardWrapper,
-                  RandomActionWrapper, JoesActionWrapper, OurActionWrapper)
+                  RandomActionWrapper, OurActionWrapper, RelativeActionWrapper)
 from mpi4py import MPI
 from stable_baselines3 import DDPG
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
@@ -24,14 +24,15 @@ assert size == 5
 
 
 ### Testing DDPG
-env_action = OurActionWrapper(gym.make("reference_environment:reference-environment-v0"))
+env_action = RelativeActionWrapper(gym.make("reference_environment:reference-environment-v0"))
 env_horizon = HorizonObservationWrapper(env_action,
                               horizon_length=horizons[rank],
-                              transform_name="Standard")
+                              transform_name="Zeroed")
 env = PhaseRewardWrapper(env_horizon, phase="Full")          # Set Phase to Full
 eval_callback = EvalCallback(env, best_model_save_path="./h={}/".format(horizons[rank]),
                              log_path='./', eval_freq=500,
                              deterministic=True, render=False)
+
 
 ### DDPG Noise
 ### Try increasing the noise when retraining.
@@ -52,6 +53,7 @@ model = DDPG('MlpPolicy', env, action_noise=action_noise, verbose=1, tensorboard
 # model.action_noise = action_noise
 trainer = Trainer(env)
 trainer.retrain_rl(model, episodes=20000, path="./h={}/".format(horizons[rank]))
+
 
 # ## Training on horizon observations
 # env = HorizonObservationWrapper(gym.make("reference_environment:reference-environment-v0"),

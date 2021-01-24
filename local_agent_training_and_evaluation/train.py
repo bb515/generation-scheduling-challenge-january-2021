@@ -1,9 +1,10 @@
 #!/usr/bin/env python
+import sys
 import gym
 import numpy as np
 from util import (Trainer, ObservationTransform,
                   HorizonObservationWrapper, PhaseRewardWrapper,
-                  RandomActionWrapper, JoesActionWrapper, OurActionWrapper)
+                  RandomActionWrapper, RelativeActionWrapper, OurActionWrapper)
 from stable_baselines3 import PPO
 from gym import spaces, ActionWrapper
 
@@ -22,11 +23,6 @@ from gym import spaces, ActionWrapper
 # trainer = Trainer(env)
 # trainer.train_rl(models_to_train=1, episodes_per_model=20000)
 
-## Testing random action wrapper
-env = JoesActionWrapper(gym.make("reference_environment:reference-environment-v0"))
-trainer = Trainer(env)
-trainer.train_rl(models_to_train=1, episodes_per_model=20000)
-
 ### Testing phase reward wrapper
 # env=PhaseRewardWrapper(gym.make("reference_environment:reference-environment-v0"), phase="Peak")
 # trainer = Trainer(env)
@@ -43,13 +39,13 @@ trainer.train_rl(models_to_train=1, episodes_per_model=20000)
 # trainer.retrain_rl(model=PPO.load("logs/best_model_peak_20"), episodes=1000)   # Retraining
 
 
-### Test training on peak then full
-env_horizon = HorizonObservationWrapper(gym.make("reference_environment:reference-environment-v0"),
-                              horizon_length=30,
-                              transform_name="Standard")
-env_peak = PhaseRewardWrapper(env_horizon, phase="Peak")          # Set Phase to Peak
-trainer = Trainer(env_peak)
-trainer.train_rl(models_to_train=1,episodes_per_model=3000)       # Begin Training
+# ### Test training on peak then full
+# env_horizon = HorizonObservationWrapper(gym.make("reference_environment:reference-environment-v0"),
+#                               horizon_length=30,
+#                               transform_name="Standard")
+# env_peak = PhaseRewardWrapper(env_horizon, phase="Peak")          # Set Phase to Peak
+# trainer = Trainer(env_peak)
+# trainer.train_rl(models_to_train=1,episodes_per_model=3000)       # Begin Training
 # model = PPO.load("logs/best_model_peak_30")                               # Load best model
 # model.learning_rate = 0.0003
 
@@ -99,45 +95,41 @@ trainer.train_rl(models_to_train=1,episodes_per_model=3000)       # Begin Traini
 # trainer.retrain_rl(model=model, episodes=50000)                    # Re-train on full phase
 
 
-### Testing DDPG
-from stable_baselines3 import DDPG
-from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
-from stable_baselines3.common.callbacks import EvalCallback
-env_action = OurActionWrapper(gym.make("reference_environment:reference-environment-v0"))
-env_horizon = HorizonObservationWrapper(env_action,
-                              horizon_length=7,
-                              transform_name="Standard")
-env = PhaseRewardWrapper(env_horizon, phase="Full")          # Set Phase to Full
+# ### Testing DDPG
+# from stable_baselines3 import DDPG
+# from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
+# from stable_baselines3.common.callbacks import EvalCallback
+# env_action = RelativeActionWrapper(gym.make("reference_environment:reference-environment-v0"))
+# env_horizon = HorizonObservationWrapper(env_action,
+#                               horizon_length=int(sys.argv[2]),
+#                               transform_name=str(sys.argv[1]))
+# env = PhaseRewardWrapper(env_horizon, phase="Full")          # Set Phase to Full
+#
+# from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback
+# check_callback = CheckpointCallback(save_freq=1000, save_path="./models/", name_prefix="model_DDPG_7")
+# eval_callback = EvalCallback(env, best_model_save_path='./logs/',
+#                              log_path='./logs/', eval_freq=1000,
+#                              deterministic=True, render=False)
+#
+# list_callback = CallbackList([check_callback, eval_callback])
 
-from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback
-check_callback = CheckpointCallback(save_freq=1000, save_path="./models/", name_prefix="model_DDPG_7")
-eval_callback = EvalCallback(env, best_model_save_path='./logs/',
-                             log_path='./logs/', eval_freq=1000,
-                             deterministic=True, render=False)
 
-list_callback = CallbackList([check_callback, eval_callback])
-
-
-### DDPG Noise
-### Try increasing the noise when retraining.
-### Try less noise based on the policy plot.
-n_actions = env.action_space.shape[-1]
-action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
-# action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
-
-model = DDPG('MlpPolicy', env, action_noise=action_noise, verbose=1, tensorboard_log="./logs/",
-            gamma=0.99,
-            learning_rate=0.0003,
-            )
-# model = DDPG.load("Model_DDPG_FS_30.zip")
-# model.learning_rate = 0.0003
-# model.gamma = 0.99
-# action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=0.05*np.ones(n_actions))
-# action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.075 * np.ones(n_actions))
-# model.action_noise = action_noise
+# ### DDPG Noise
+# ### Try increasing the noise when retraining.
+# ### Try less noise based on the policy plot.
+# n_actions = env.action_space.shape[-1]
+# action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=1 * np.ones(n_actions))
+# # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+#
+# model = DDPG('MlpPolicy', env, action_noise=action_noise, verbose=1, tensorboard_log="./logs",
+#             gamma=0.99,
+#             learning_rate=0.0003,
+#             )
+# # model = DDPG.load("Model_DDPG_FS_30.zip")
+# # model.learning_rate = 0.0003
+# # model.gamma = 0.99
+# # action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=0.05*np.ones(n_actions))
+# # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.075 * np.ones(n_actions))
+# # model.action_noise = action_noise
 # trainer = Trainer(env)
-# trainer.retrain_rl(model, episodes=10000)
-
-model.learn(total_timesteps=1000000, callback=list_callback)
-
-
+# trainer.retrain_rl(model, episodes=1000000, ident=str(sys.argv[1]+"_"+sys.argv[2]))
