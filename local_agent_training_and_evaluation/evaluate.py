@@ -15,7 +15,7 @@ seeds = evaluate.read_seeds(fname="seeds.csv")
 # mean_reward = evaluate.RL_agent(seeds) # Add your agent to the Evaluate class and call it here e.g. evaluate.my_agent(seeds)
 # mean_reward = evaluate.matching_agent(seeds) # Add your agent to the Evaluate class and call it here e.g. evaluate.my_agent(seeds)
 # mean_reward = evaluate.min_agent(seeds) # Add your agent to the Evaluate class and call it here e.g. evaluate.my_agent(seeds)
-mean_reward = evaluate.transformed_agent(seeds, H=4, transform="Standard")
+mean_reward = evaluate.transformed_agent(seeds, H=8, transform="Zeroed")
 
 ## Plot the last episode
 plot2(env.state, "fixed_policy_h=4")
