@@ -13,7 +13,7 @@ agent = DDPG.load("best_model")
 
 
 evaluate = Evaluate(env, agent)
-seeds = evaluate.read_seeds(fname="seeds.csv")
+seeds = evaluate.read_seeds(fname="seeds_original.csv")
 # mean_reward = evaluate.RL_agent(seeds) # Add your agent to the Evaluate class and call it here e.g. evaluate.my_agent(seeds)
 # mean_reward = evaluate.matching_agent(seeds) # Add your agent to the Evaluate class and call it here e.g. evaluate.my_agent(seeds)
 # mean_reward = evaluate.min_agent(seeds) # Add your agent to the Evaluate class and call it here e.g. evaluate.my_agent(seeds)

@@ -24,11 +24,11 @@ seeds = read_seeds()
 scores = []
 for seed in seeds:
     submission = client.containers.run(
-        image="submission:meaningful",
-        name="agent",
+        image="submission:ags_v02",
+        name=None,
         network="local_rangl",
         detach=False,
-        auto_remove=True,
+        auto_remove=False,
         # command="sleep infinity",  # debug
         environment={
             "RANGL_SEED": seed,

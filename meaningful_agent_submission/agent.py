@@ -12,6 +12,7 @@ client = Client(remote_base)
 
 env_id = "reference-environment-v0"
 seed = int(os.getenv("RANGL_SEED", 123456))
+
 instance_id = client.env_create(env_id, seed)
 
 
@@ -23,7 +24,7 @@ client.env_monitor_start(
     video_callable=False,
 )
 
-model = DDPG.load("MODEL_ALPHA_GENERATION")
+model = DDPG.load("MODEL_ALPHA_GENERATION.zip")
 
 observation = client.env_reset(instance_id)
 
@@ -32,10 +33,8 @@ print(observation)
 import numpy as np
 def ObservationTransform(obs, H, transform, steps_per_episode=int(96)):
     step_count, generator_1_level, generator_2_level = obs[:3]
-    agent_prediction = np.array(obs[3:])  # since it was stored as a tuple
-    # Initiate the padding values to 2 (the mean value), but note that this is a design choice
-    # It might be better to initate them to -99999999 (a large number) if that means they interfere less
-    # It might not matter
+    agent_prediction = np.array(obs[3:])
+
     agent_horizon_prediction = agent_prediction[-1] * np.ones(steps_per_episode)
     agent_horizon_prediction[:int(steps_per_episode - step_count)] = agent_prediction[int(step_count):]  # inclusive index
     agent_horizon_prediction = agent_horizon_prediction[:H]
@@ -67,7 +66,6 @@ while True:
 
     # Perform observation transform to pass mapped obs to agent
     observation = ObservationTransform(observation, H=7, transform="Standard")
-    observation = np.array(observation)
 
     action, _ = model.predict(observation, deterministic=True)
     action = [float(action[0]), float(action[1])]
