@@ -164,6 +164,7 @@ class Evaluate:
                 action, _states = model.predict(obs, deterministic=True)
                 obs, _, _, _ = self.env.step(action)
             rewards.append(sum(self.env.state.rewards_all))
+            print(rewards)
         return np.mean(rewards)
 
 ### The reason I am defining this ObservationMapping as a separate function and not a method is

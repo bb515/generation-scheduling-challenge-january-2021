@@ -18,7 +18,7 @@ for steps in np.arange(400000,500000,1000):
     agent = DDPG.load(model_name)
 
     evaluate = Evaluate(env, agent)
-    seeds = evaluate.read_seeds(fname="seeds.csv")
+    seeds = evaluate.read_seeds(fname="seeds_original.csv")
     mean_reward = evaluate.transformed_agent(seeds, H=7,transform="Standard")
 
     print('Model number: ', str(model_name))

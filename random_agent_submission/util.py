@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def generate_seeds(n, fname="seeds.csv"):
+def generate_seeds(n, fname="seeds_original.csv"):
     seeds = [random.randint(0, 1e7) for i in range(n)]
     df = pd.DataFrame(seeds)
     df.to_csv(fname, index=False, header=False)
 
 
-def read_seeds(fname="seeds.csv"):
+def read_seeds(fname="seeds_original.csv"):
     file = open(fname)
     csv_file = csv.reader(file)
     seeds = []
