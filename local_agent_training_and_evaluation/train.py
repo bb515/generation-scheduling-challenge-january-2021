@@ -100,7 +100,7 @@ from gym import spaces, ActionWrapper
 
 
 #################################################################
-# This section below is how the submitted model has been trained.
+# This section below is an experimental change.
 #################################################################
 
 
@@ -128,7 +128,7 @@ action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=0.1 
 # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
 
 ### Set the policy and the DDPG noise
-model = DDPG('MlpPolicy', env, action_noise=action_noise, verbose=1, tensorboard_log="./logs/",
+model = DDPG('LnMlpPolicy', env, action_noise=action_noise, verbose=1, tensorboard_log="./logs/",
             gamma=0.99,
             learning_rate=0.0003,
             )
