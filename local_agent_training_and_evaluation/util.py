@@ -36,19 +36,19 @@ class Trainer:
         end = time.time()
         print("time (min): ", (end - start) / 60)
 
-    def retrain_rl(self, model, episodes, path='./logs/'):
+    def retrain_rl(self, model, episodes, path='./logs/', ident="NONAME"):
         # Method for retraining a saved model for more timesteps
         start = time.time()
 
         # Callback for saving the best agent during training
-        eval_callback = EvalCallback(self.env, best_model_save_path=path,
+        eval_callback = EvalCallback(self.env, best_model_save_path=ident,
                                      log_path=path, eval_freq=500,
                                      deterministic=True, render=False)
         steps_per_model = episodes * self.param.steps_per_episode
 
         model.set_env(self.env)
         model.learn(total_timesteps=steps_per_model, callback=eval_callback)
-        model.save("MODEL_RETRAINED")
+        model.save(ident)
 
         end = time.time()
         print("time (min): ", (end - start) / 60)
@@ -131,7 +131,7 @@ class Evaluate:
             self.env.seed(seed)
             obs = self.env.reset()
             while not self.env.state.is_done():
-                action, _states = model.predict(obs,deterministic=True)
+                action, _states = model.predict(obs, deterministic=True)
                 obs, _, _, _ = self.env.step(action)
             rewards.append(sum(self.env.state.rewards_all))
         return np.mean(rewards)
@@ -142,7 +142,7 @@ class Evaluate:
         for seed in seeds:
             self.env.seed(seed)
             self.env.reset()
-            obs = self.env.step([2,0])
+            obs = self.env.step([2, 0])
             while not self.env.state.is_done():
                 current_time = obs[0][0]
                 current_generation_1 = obs[0][1]
@@ -168,27 +168,38 @@ class Evaluate:
             rewards.append(sum(self.env.state.rewards_all))
         return np.mean(rewards)
 
-### The reason I am defining this ObservationMapping as a separate function and not a method is
-### because we want the exact same function to be used when running the evaluation of the agent.
-### Particularly important when submitting the agent to Rangl.
 
 def ObservationTransform(obs, H, transform, steps_per_episode=int(96)):
+    """
+    Apply a tranformation to the observation input array.
+
+    (de Saint-Exupery's Law of Design)
+    “Perfection is achieved when there is nothing left to take away".
+    So we take away the useless dimensions of the observation space,
+    and also make some time shift transform so the agent always looks at the i'th index ahead.
+
+    This ObservationMapping is a global function and not in a class because we want the exact
+    same function to be used when running the evaluation of the agent, which is important when
+    submitting the agent to Rangl.
+    """
     step_count, generator_1_level, generator_2_level = obs[:3]
     agent_prediction = np.array(obs[3:])  # since it was stored as a tuple
 
     agent_horizon_prediction = agent_prediction[-1] * np.ones(steps_per_episode)
-    agent_horizon_prediction[:int(steps_per_episode - step_count)] = agent_prediction[int(step_count):]  # inclusive index
+    agent_horizon_prediction[:int(steps_per_episode - step_count)] = agent_prediction[
+                                                                     int(step_count):]  # inclusive index
     agent_horizon_prediction = agent_horizon_prediction[:H]
-
+    # TODO: refactor
     if transform == "Standard":
         pass
     if transform == "Zeroed":
-        agent_horizon_prediction -= agent_prediction[step_count] * np.ones(H)
+        agent_horizon_prediction -= agent_prediction[int(step_count)] * np.ones(int(H))
     if transform == "Deltas":
         # TODO: test this
-        agent_horizon_prediction = np.concatenate(([agent_prediction[step_count]],
+        agent_horizon_prediction = np.concatenate(([agent_prediction[int(step_count)]],
                                                    agent_horizon_prediction))
         agent_horizon_prediction = np.diff(agent_horizon_prediction)
+
 
     obs = (step_count, generator_1_level, generator_2_level) + tuple(agent_horizon_prediction)
 
@@ -196,24 +207,29 @@ def ObservationTransform(obs, H, transform, steps_per_episode=int(96)):
 
 
 class HorizonObservationWrapper(ObservationWrapper):
-
+    """An Observation wrapper concerning the horizon. Inherits gym ObservationWrapper."""
     def __init__(self, env, horizon_length, transform_name):
-
+        """
+        :arg env: reference environment.
+        :arg int horizon_length: How far in the future in time-steps the agent can 'see'.
+        :arg str transform_name: The name of the observation space transform. Options:
+            "Standard" - TODO: descriptions
+            "Zeroed" -
+            "Deltas" -
+            "Zero_Delta" -
+        """
         super(HorizonObservationWrapper, self).__init__(env)
-
         self.H = horizon_length
-
         # Different transform methods
-        transform_options = ["Standard", "Zeroed", "Deltas"]
+        transform_options = ["Standard", "Zeroed", "Deltas", "Zero_Delta"]
         assert transform_name in transform_options, "Set a valid transform"
         self.transform = transform_name
-
         self.steps_per_episode = int(96)
-        self.n_obs = len(ObservationTransform( tuple(np.ones(99,)), self.H , transform=self.transform))
+        self.n_obs = len(ObservationTransform(tuple(np.ones(99, )), self.H, transform=self.transform))
+        # TODO: can't we just call this from env.get_observation_space
         self.observation_space = self.get_observation_space()
 
     def get_observation_space(self):
-
         obs_low = np.full(self.n_obs, -1000, dtype=np.float32)  # last 96 entries of observation are the predictions
         obs_low[0] = -1  # first entry of obervation is the timestep
         obs_low[1] = 0.5  # min level of generator 1
@@ -226,14 +242,14 @@ class HorizonObservationWrapper(ObservationWrapper):
         return result
 
     def observation(self, obs):
-
-        # Apply the globally defined ObservationTransform transform to the observations
-        obs = ObservationTransform(obs, self.H, transform=self.transform, steps_per_episode=self.steps_per_episode)
-
+        """Apply the globally defined ObservationTransform transform to the observations."""
+        obs = ObservationTransform(
+            obs, self.H, transform=self.transform, steps_per_episode=self.steps_per_episode)
         return obs
 
 
 class PhaseRewardWrapper(RewardWrapper):
+    """A Reward wrapper concerning the scoring phase. Inherits gym.RewardWrapper."""
     def __init__(self, env, phase="Full"):
         super(PhaseRewardWrapper, self).__init__(env)
 
@@ -242,30 +258,34 @@ class PhaseRewardWrapper(RewardWrapper):
 
     def reward(self, rew):
 
-        if self.phase=="Warmup" and self.env.state.step_count != 1:
+        if self.phase == "Warmup" and self.env.state.step_count != 1:
             rew = 0
 
-        if self.phase=="Peak" and self.env.state.step_count != 5:
+        if self.phase == "Peak" and self.env.state.step_count != 5:
             rew = 0
 
         return rew
 
 
 class RandomActionWrapper(gym.ActionWrapper):
+    """An Action Wrapper that forces a random action with some probability. Inherits gym.ActionWrapper."""
+    def __init__(self, env, epsilon=0.1):
+        """
+        :arg env: Reference environment.
+        :arg epsilon: The probability with which a random action is forces
+        """
+        super(RandomActionWrapper, self).__init__(env)
 
-   def __init__(self, env, epsilon=0.1):
+        self.epsilon = epsilon
 
-       super(RandomActionWrapper, self).__init__(env)
-
-       self.epsilon = epsilon
-
-   def action(self, action):
-       if random.random() < self.epsilon:
-           return self.env.action_space.sample()
-       return action
+    def action(self, action):
+        if random.random() < self.epsilon:
+            return self.env.action_space.sample()
+        return action
 
 
 class OurActionWrapper(ActionWrapper):
+    """An ActionWrapper that forces a random action with some probability. Inherits gym.ActionWrapper."""
     def __init__(self, env):
         super(ActionWrapper, self).__init__(env)
 
@@ -289,11 +309,11 @@ class OurActionWrapper(ActionWrapper):
         return act
 
 
-class JoesActionWrapper(gym.ActionWrapper):
-
+class RelativeActionWrapper(ActionWrapper):
+    """Apply the optimal action calculated from the desired change."""
     def __init__(self, env):
 
-        super(JoesActionWrapper, self).__init__(env)
+        super(RelativeActionWrapper, self).__init__(env)
         act_low = np.array(
             [
                 -0.7
@@ -306,6 +326,7 @@ class JoesActionWrapper(gym.ActionWrapper):
             ],
             dtype=np.float32,
         )
+        # Overwrite action space with the relative action
         self.action_space = spaces.Box(act_low, act_high, dtype=np.float32)
 
     def action(self, action):
@@ -314,15 +335,26 @@ class JoesActionWrapper(gym.ActionWrapper):
         the 'optimal' action for both generators.
         delta \in [-0.7, 0.7] will saturate if value given outside this range.
         """
-        delta = action
-        if delta < -0.7:
-            return (-0.2, -0.5)
-        elif delta >= -0.7 and delta < -0.3:
-            return (delta + 0.5, -0.5)
-        elif delta >= -0.3 and delta <= 0.7:
-            return (0.2, delta - 0.2)
-        # else delta > 0.7
-        return (0.2, 0.5)
+        # Get current generator levels
+        (g1, g2) = (self.env.state.generator_1_level, self.env.state.generator_2_level)
+        (g1_min, g1_max) = (self.env.param.generator_1_min, self.env.param.generator_1_max)
+        (g2_min, g2_max) = (self.env.param.generator_2_min, self.env.param.generator_2_max)
+        # Get updated g1_delta and g2_delta based on current values
+        # TODO: hard-coded max and min ramps
+        g1_delta_min = g1_min - g1 if g1_min - g1 > -0.2 else -0.2
+        g1_delta_max = g1_max - g1 if g1_max - g1 < 0.2 else 0.2
+        g2_delta_min = g2_min - g2 if g2_min - g2 > -0.5 else -0.5
+        g2_delta_max = g2_max - g2 if g2_max - g2 < 0.5 else 0.5
+        delta_min = g1_delta_min + g2_delta_min
+        delta_max = g1_delta_max + g2_delta_max
+        if action < delta_min:  # Constrained by minimum deltas
+            return (g1_delta_min + g1, g2_delta_min + g2)
+        if action >= delta_min and action < g1_delta_max + g1_delta_min:  # Prefer to use cheap generator
+            return (action - g2_delta_min + g1, g2_delta_min + g2)
+        if action >= g1_delta_max + g1_delta_min and action < delta_max:  # Cheap generator is maxed out
+            return (g1_delta_max + g1, action - g1_delta_max + g2)
+        # else delta > delta_max
+        return (g1_delta_max + g1, g2_delta_max + g2)  # Constrained by maximum deltas
 
 
 def get_agent_prediction(agent_predictions):
@@ -409,15 +441,13 @@ def plot_frame(state_tuple, lim_tuple, ax, frame):
     ax4.set_ylim(ylim_min_4, ylim_max_4)
     ax4.set_xlim(0, xlim_max)
     ax4.plot(agent_prediction[frame, :frame + 1], 'b')  # up to and including current time
-    ax4.plot(np.linspace(frame, 96, num=int(96-frame) , dtype=int), agent_prediction[frame, frame:], 'b', alpha=0.35)
+    ax4.plot(np.linspace(frame, 96, num=int(96 - frame), dtype=int), agent_prediction[frame, frame:], 'b', alpha=0.35)
     ax4.plot(generator_1_levels[:frame] + generator_2_levels[:frame], 'r', label='generator_levels')
     ax4.set_xlabel("time")
     ax4.set_ylabel("prediction")
 
-
     # Repack ax
     return ((ax1, ax2), (ax3, ax4))
-
 
 
 def plot_picture(state, fname):
@@ -515,13 +545,13 @@ def plot_video(state, fname):
     ylim_max_4 = 1.05 * np.amax(agent_predictions)
     ylim_min_4 = 1.05 * np.amin(agent_predictions)
     state_tuple = (rewards_total,
-     # rewards_fuel_cost,
-     # rewards_imbalance_cost,
-     generator_1_levels,
-     generator_2_levels,
-     actions,
-     agent_predictions,
-     agent_prediction)
+                   # rewards_fuel_cost,
+                   # rewards_imbalance_cost,
+                   generator_1_levels,
+                   generator_2_levels,
+                   actions,
+                   agent_predictions,
+                   agent_prediction)
     lim_tuple = (xlim_max, ylim_min_1, ylim_max_3, ylim_min_3, ylim_max_4, ylim_min_4)
     J = 2
     K = 2

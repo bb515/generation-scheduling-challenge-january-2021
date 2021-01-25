@@ -1,9 +1,10 @@
 #!/usr/bin/env python
+import sys
 import gym
 import numpy as np
 from util import (Trainer, ObservationTransform,
                   HorizonObservationWrapper, PhaseRewardWrapper,
-                  RandomActionWrapper, JoesActionWrapper, OurActionWrapper)
+                  RandomActionWrapper, RelativeActionWrapper, OurActionWrapper)
 from stable_baselines3 import PPO
 from gym import spaces, ActionWrapper
 
@@ -27,10 +28,12 @@ from gym import spaces, ActionWrapper
 # trainer = Trainer(env)
 # trainer.train_rl(models_to_train=1, episodes_per_model=20000)
 
+
 ### Testing random action wrapper
 # env = JoesActionWrapper(gym.make("reference_environment:reference-environment-v0"))
 # trainer = Trainer(env)
 # trainer.train_rl(models_to_train=1, episodes_per_model=20000)
+
 
 ### Testing phase reward wrapper
 # env=PhaseRewardWrapper(gym.make("reference_environment:reference-environment-v0"), phase="Peak")
@@ -133,6 +136,4 @@ model = DDPG('MlpPolicy', env, action_noise=action_noise, verbose=1, tensorboard
 ### Train the specified model
 trainer = Trainer(env)
 trainer.retrain_rl(model, episodes=10000)
-
-
 
