@@ -166,7 +166,6 @@ class Evaluate:
                 action, _states = model.predict(obs, deterministic=True)
                 obs, _, _, _ = self.env.step(action)
             rewards.append(sum(self.env.state.rewards_all))
-            print(rewards)
         return np.mean(rewards)
 
 ### The reason I am defining this ObservationMapping as a separate function and not a method is
@@ -176,9 +175,7 @@ class Evaluate:
 def ObservationTransform(obs, H, transform, steps_per_episode=int(96)):
     step_count, generator_1_level, generator_2_level = obs[:3]
     agent_prediction = np.array(obs[3:])  # since it was stored as a tuple
-    # Initiate the padding values to 2 (the mean value), but note that this is a design choice
-    # It might be better to initate them to -99999999 (a large number) if that means they interfere less
-    # It might not matter
+
     agent_horizon_prediction = agent_prediction[-1] * np.ones(steps_per_episode)
     agent_horizon_prediction[:int(steps_per_episode - step_count)] = agent_prediction[int(step_count):]  # inclusive index
     agent_horizon_prediction = agent_horizon_prediction[:H]
@@ -193,16 +190,7 @@ def ObservationTransform(obs, H, transform, steps_per_episode=int(96)):
                                                    agent_horizon_prediction))
         agent_horizon_prediction = np.diff(agent_horizon_prediction)
 
-
-    # print("Working: horizon obs = {}".format(obs))
-
-    ### This code adds a "steps_to_peak" observation
-    steps_to_peak = list(agent_prediction).index(max(agent_prediction)) - step_count
-    # obs = (step_count, steps_to_peak, generator_1_level, generator_2_level) + tuple(agent_horizon_prediction)  # repack
-
     obs = (step_count, generator_1_level, generator_2_level) + tuple(agent_horizon_prediction)
-
-    # print(obs)
 
     return obs
 
@@ -450,7 +438,7 @@ def plot_picture(state, fname):
 
     J = 2
     K = 2
-    fig, ax = plt.subplots(J, K)
+    fig, ax = plt.subplots(J, K, figsize=(10,5))
     ((ax1, ax2), (ax3, ax4)) = ax
     # cumulative total cost
     ax1.set_xlim(0, xlim_max)
@@ -502,10 +490,11 @@ def plot_picture(state, fname):
     # agent prediction
     ax4.set_ylim(ylim_min_4, ylim_max_4)
     ax4.set_xlim(0, xlim_max)
-    ax4.plot(agent_prediction[-1], 'b')  # up to and including current time
-    ax4.plot(generator_1_levels + generator_2_levels, 'r', label='generator_levels')
+    ax4.plot(agent_prediction[-1], 'b', label="Demand")  # up to and including current time
+    ax4.plot(generator_1_levels + generator_2_levels, 'r', label='Generation Level')
     ax4.set_xlabel("time")
     ax4.set_ylabel("prediction")
+    ax4.legend()
 
     plt.savefig(fname)
 

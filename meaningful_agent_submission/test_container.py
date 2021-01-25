@@ -25,7 +25,7 @@ scores = []
 for seed in seeds:
     submission = client.containers.run(
         image="submission:ags_v02",
-        name=None,
+        name="agent",
         network="local_rangl",
         detach=False,
         auto_remove=False,

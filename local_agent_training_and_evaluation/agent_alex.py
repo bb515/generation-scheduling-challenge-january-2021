@@ -57,13 +57,13 @@ H=3
 agent = AlexAgent(H=H)
 evaluate = Evaluate(env, agent)
 
-seeds = evaluate.read_seeds(fname="seeds_original.csv")
+seeds = evaluate.read_seeds(fname="seeds.csv")
 mean_reward = evaluate.RL_agent(seeds)
 
 
 def linear_policy_optimisation(env, agent, p0):
 
-    seeds = evaluate.read_seeds(fname="seeds_original.csv")
+    seeds = evaluate.read_seeds(fname="seeds.csv")
 
     def func(vec):
         agent.policy_coefficients = vec.reshape((2, agent.H))

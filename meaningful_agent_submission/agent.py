@@ -49,16 +49,7 @@ def ObservationTransform(obs, H, transform, steps_per_episode=int(96)):
                                                    agent_horizon_prediction))
         agent_horizon_prediction = np.diff(agent_horizon_prediction)
 
-
-    # print("Working: horizon obs = {}".format(obs))
-
-    ### This code adds a "steps_to_peak" observation
-    steps_to_peak = list(agent_prediction).index(max(agent_prediction)) - step_count
-    # obs = (step_count, steps_to_peak, generator_1_level, generator_2_level) + tuple(agent_horizon_prediction)  # repack
-
     obs = (step_count, generator_1_level, generator_2_level) + tuple(agent_horizon_prediction)
-
-    # print(obs)
 
     return obs
 
